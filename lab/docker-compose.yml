@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  microweber:
+    build:
+      context: ..
+      dockerfile: lab/Dockerfile
+    container_name: microweber_lab
+    ports:
+      - "8888:80"
+    volumes:
+      - mw_userfiles:/var/www/html/userfiles
+      - mw_storage:/var/www/html/storage
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+    restart: unless-stopped
+
+volumes:
+  mw_userfiles:
+  mw_storage:

