@@ -23,13 +23,21 @@ git branch -M main && git push -u origin main
 - **Topics** (quan trọng cho discovery): `cve` `security` `rce` `microweber` `exploit` `poc` `penetration-testing` `php` `cms`
 - **Pin** repo vào profile. Mở **Issues** (nếu ai đó hỏi kỹ thuật, trả lời nhanh = lên trending có trọng số).
 
-## C. Publish bài blog (15 phút)
+## C. Publish bài blog (1 LỆNH)
 
-1. Đổi tên file `drafts/…-microweber-unauth-rce-chain-d.md` → ngày release, đưa vào `_posts/`
-2. Copy ảnh từ `img_POC/` → `assets/`, chạy `tools\optimize-images.ps1`, sửa đường dẫn trong bài (`/blog/assets/*.webp`)
-3. Thêm 1 dòng `New-OgImage` vào `tools/make-og.ps1` (title: "Microweber unauth RCE"), chạy, khai báo `image:` front matter
-4. Điền lại các `[FILL]` trong bài (CVE, fixed version, link repo)
-5. `git add -A ; git commit -m "post: Microweber <=2.0.20 unauth RCE chain analysis" ; git push`
+> **Đã dựng sẵn launcher ngoài repo (không thể lộ lên GitHub):**
+>
+> ```
+> C:\Users\VIETLONGVNN\Documents\XUAT-BAN-MICROWEBER.cmd     (double-click hoặc gõ tên trong cmd)
+> ```
+>
+> Tương đương: `powershell tools\release-microweber.ps1 -Force -PublishRepo`
+>
+> **Script tự làm hết:** move ảnh + rewrite path → stamp ngày release → sinh + optipng OG image → ghi `_posts\<ngày>-microweber-unauth-rce.md` → commit + push blog → push repo research + API flip private→public.
+>
+> **Guard không thể skip:** còn bất kỳ `[FILL]` nào (CVE, link repo, timeline) → script list ra từng dòng và DỪNG — tránh publish bài đứt đủ. Chỉ việc điền 5 chỗ `[FILL]` trong draft trước khi chạy (đã test với bản tiếng Việt: guard list đúng 5 dòng 10/203/204/205/211).
+>
+> `-Force` chỉ bypass MỘT thứ: check "vendor đã patch chưa". Quyết định thời điểm (patch hoặc đủ 90 ngày) là của mày lúc bấm chạy.
 
 ## D. Phát tán (thứ tự + giờ vàng)
 
