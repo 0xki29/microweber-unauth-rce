@@ -94,7 +94,7 @@ Root-cause fixes recommended to the vendor are in [`advisory.md`](advisory.md#re
 
 ## Credits
 
-Found by **[0xki29](https://0xki29.github.io/blog)** — security research, responsible disclosure. Full write-up: **[[FILL: blog post URL]](https://0xki29.github.io/blog/microweber-unauth-rce)**.
+Found by **[0xki29](https://0xki29.github.io/blog)** — security research, responsible disclosure. Full write-up: **[[blog post URL]](https://0xki29.github.io/blog/microweber-unauth-rce)**.
 
 ## Legal / responsible use
 
